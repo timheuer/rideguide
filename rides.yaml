@@ -1,0 +1,50 @@
+rides:
+  - route_name: "BrownBoldt"
+    gpx_url: "https://www.strava.com/routes/3552836216854150306"
+    gpx_file: "gpx/azcamp-brownboldt.gpx"
+    distance:
+      miles: 0
+      kilometers: 118
+    description: >-
+      This is mixed terrain going to the Humboldt FAA tower for the views. 
+      Bring water as there are no refill locations along the route after we leave first gravel.
+      It will be single track as we start then on to a paved road until we hit end of pavement. This 
+      will turn into groad surfaces and then a paved 5mi climb to the tower.
+      The descent back will follow more downhill pavement back to start.
+    start_location: "From House"
+  - route_name: "A Dare You"
+    gpx_url: "https://www.strava.com/routes/3552835565313289198"
+    gpx_file: "gpx/azcamp-aderodown.gpx"
+    distance:
+      miles: 0
+      kilometers: 98
+    description: >-
+      This takes us first up Adero Road before descending into the surrounding terrain. There is 
+      bathrooms and water refill at the top of Adero climb. From there we'll 'descend' (maybe some hike-a-bike) 
+      into the McDowell area along some fun and challenging terrain. There is an equestrian event this weekend in McDowell 
+      so we'll navigate that as best we can. We'll pop back out into Browns for a bit 
+      and try to avoid as many sandy washes on the way back home 😁.
+    start_location: "From House"
+  - route_name: "Piestawa and Old Town"
+    gpx_url: "https://www.strava.com/routes/3552836216861363362"
+    gpx_file: "gpx/azcamp-piestawaandoldtown.gpx"
+    distance:
+      miles: 0
+      kilometers: 58
+    description: >-
+      We'll start from the house making our way around the Phoenix Mountain Preserve (possible diversion into trails). 
+      From there we'll go see the trailhead at Piestawa Peak and a view from the Wrigley Mansion. 
+      After we'll head back towards Old Town, exploring some of the local cafe fare. Then make our way back to the house.
+    start_location: "From House"
+  - route_name: "High Desert Field Trip"
+    gpx_url: "https://www.strava.com/routes/3555272746098941956"
+    gpx_file: "gpx/azcamp-prescottfieldtrip.gpx"
+    distance:
+      miles: 0
+      kilometers: 99
+    description: >-
+      This would be a day trip up to the high desert of Prescott, exploring more forest 
+      roads and high views of areas like Thumb Butte and Skull Valley, and along some old 
+      rail trails. Mixed surface with some sustained climbs. Two climb loops but option to make it shorter 
+      if we feel like it.
+    start_location: "Prescott Courthouse - 2hr drive from House"

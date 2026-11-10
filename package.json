@@ -1,0 +1,12 @@
+{
+  "name": "brbb-arizona-ride-guide",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node generate-pdf.mjs",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  }
+}
