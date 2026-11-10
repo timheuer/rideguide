@@ -6,6 +6,7 @@ import { parse } from "yaml";
 const root = dirname(fileURLToPath(import.meta.url));
 const sourcePath = resolve(root, "rides.yaml");
 const outputPath = resolve(root, "ride-guide.html");
+const indexPath = resolve(root, "index.html");
 
 function escapeHtml(value) {
   return String(value)
@@ -678,5 +679,7 @@ export async function buildHtml() {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const html = await buildHtml();
   await writeFile(outputPath, html, "utf8");
+  await writeFile(indexPath, html, "utf8");
   console.log(`Generated ${outputPath}`);
+  console.log(`Generated ${indexPath}`);
 }

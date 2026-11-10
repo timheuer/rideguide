@@ -7,6 +7,7 @@ import { buildHtml } from "./generate-guide.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const htmlPath = resolve(root, "ride-guide.html");
+const indexPath = resolve(root, "index.html");
 const pdfPath = resolve(root, "ride-guide.pdf");
 
 const candidates = [
@@ -25,7 +26,9 @@ if (!browser) {
   throw new Error("No Edge or Chrome found. Set BROWSER_PATH to a Chromium-based browser executable.");
 }
 
-await writeFile(htmlPath, await buildHtml(), "utf8");
+const html = await buildHtml();
+await writeFile(htmlPath, html, "utf8");
+await writeFile(indexPath, html, "utf8");
 
 // The virtual time budget gives map tiles and web fonts time to load before printing.
 execFileSync(
@@ -42,4 +45,5 @@ execFileSync(
 );
 
 console.log(`Generated ${htmlPath}`);
+console.log(`Generated ${indexPath}`);
 console.log(`Generated ${pdfPath}`);

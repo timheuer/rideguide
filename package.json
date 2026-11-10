@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:html": "node generate-guide.mjs",
     "build": "node generate-pdf.mjs",
     "start": "node server.mjs"
   },

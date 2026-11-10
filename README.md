@@ -6,10 +6,16 @@ The guide is generated from `rides.yaml`; edit that file to update ride details.
 
 1. Install Node.js 20 or newer.
 2. Run `npm install` once.
-3. Run `npm run build` to write both `ride-guide.html` and `ride-guide.pdf` (the PDF uses your installed Edge or Chrome; set `BROWSER_PATH` if it isn't found).
-4. Open either file, or run `npm start` to view the guide in a browser.
+3. Run `npm run build:html` to write `index.html` and `ride-guide.html`. For the PDF too, run `npm run build` (uses your installed Edge or Chrome; set `BROWSER_PATH` if it isn't found).
+4. Open either HTML file, or run `npm start` to view the guide in a browser.
+
+`index.html` is the GitHub Pages homepage, so publishing it at the site root makes the guide available at the short site URL. Use `npm run build:html` in the Pages build step; it does not require a browser.
 
 The generator creates one section per ride, validates the fields it needs, and escapes ride-provided text before writing HTML. Each ride starts on a new printed page; long route notes can continue naturally onto another page.
+
+## Publish with GitHub Pages
+
+The workflow in `.github/workflows/deploy-pages.yml` builds and deploys the guide whenever changes are pushed to `main`. In the repository's **Settings > Pages**, set the build and deployment source to **GitHub Actions**. The workflow publishes only the generated `index.html`.
 
 ## Serve it locally
 
