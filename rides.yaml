@@ -36,7 +36,7 @@ rides:
       From there we'll go see the trailhead at Piestawa Peak and a view from the Wrigley Mansion. 
       After we'll head back towards Old Town, exploring some of the local cafe fare. Then make our way back to the house.
     start_location: "From House"
-  - route_name: "High Desert Field Trip"
+  - route_name: "ALT: High Desert Field Trip"
     gpx_url: "https://www.strava.com/routes/3555272746098941956"
     gpx_file: "gpx/AZCamp-PrescottFieldTrip.gpx"
     distance:
