@@ -1,7 +1,7 @@
 rides:
   - route_name: "BrownBoldt"
     gpx_url: "https://www.strava.com/routes/3552836216854150306"
-    gpx_file: "gpx/azcamp-brownboldt.gpx"
+    gpx_file: "gpx/AZCamp-BrownBoldt.gpx"
     distance:
       miles: 0
       kilometers: 118
@@ -14,7 +14,7 @@ rides:
     start_location: "From House"
   - route_name: "A Dare You"
     gpx_url: "https://www.strava.com/routes/3552835565313289198"
-    gpx_file: "gpx/azcamp-aderodown.gpx"
+    gpx_file: "gpx/AZCamp-AderoDown.gpx"
     distance:
       miles: 0
       kilometers: 98
@@ -27,7 +27,7 @@ rides:
     start_location: "From House"
   - route_name: "Piestawa and Old Town"
     gpx_url: "https://www.strava.com/routes/3552836216861363362"
-    gpx_file: "gpx/azcamp-piestawaandoldtown.gpx"
+    gpx_file: "gpx/AZCamp-PiestawaAndOldTown.gpx"
     distance:
       miles: 0
       kilometers: 58
@@ -38,7 +38,7 @@ rides:
     start_location: "From House"
   - route_name: "High Desert Field Trip"
     gpx_url: "https://www.strava.com/routes/3555272746098941956"
-    gpx_file: "gpx/azcamp-prescottfieldtrip.gpx"
+    gpx_file: "gpx/AZCamp-PrescottFieldTrip.gpx"
     distance:
       miles: 0
       kilometers: 99
