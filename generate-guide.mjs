@@ -210,11 +210,12 @@ function renderMap(track) {
   return `<svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Route map" preserveAspectRatio="xMidYMid slice">
           <rect width="${W}" height="${H}" fill="#e8ece6"/>
           ${tiles}
-          <path d="${line}" fill="none" stroke="#fffefa" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="${line}" fill="none" stroke="#c4622d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-          ${arrows}
+          <path class="route-line" d="${line}" fill="none" stroke="#fffefa" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="route-line" d="${line}" fill="none" stroke="#c4622d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <g class="route-arrows">${arrows}</g>
           <circle cx="${num(sx)}" cy="${num(sy)}" r="7" fill="#173c38" stroke="#fffefa" stroke-width="3"/>
           <circle cx="${num(ex)}" cy="${num(ey)}" r="7" fill="#c4622d" stroke="#fffefa" stroke-width="3"/>
+          <circle class="route-position" cx="${num(sx)}" cy="${num(sy)}" r="6" fill="#173c38" stroke="#fffefa" stroke-width="3"/>
           <text x="${W - 8}" y="${H - 8}" text-anchor="end" font-size="11" fill="#2b3a37" stroke="#fffefa" stroke-width="3" paint-order="stroke">&copy; OpenStreetMap contributors</text>
         </svg>`;
 }
@@ -264,7 +265,7 @@ function renderElevation(track) {
 
 const metric = (meters) => Math.round(meters).toLocaleString("en-US");
 
-function renderTrack(track) {
+function renderTrack(track, index) {
   if (!track) return "";
   let elevation = "";
   if (track.hasEle) {
@@ -282,7 +283,18 @@ function renderTrack(track) {
       </div>`;
   }
   return `
-      <div class="route-map"><h3>Route map</h3>${renderMap(track)}</div>${elevation}`;
+      <div class="route-map">
+        <h3>Route map</h3>
+        <div class="map-frame">
+          ${renderMap(track)}
+          <button class="map-play" type="button" hidden>Play route</button>
+        </div>
+        <div class="map-controls" hidden>
+          <label for="route-speed-${index}">Draw speed</label>
+          <input id="route-speed-${index}" type="range" min="0.5" max="3" step="0.25" value="1">
+          <output for="route-speed-${index}">1&times;</output>
+        </div>
+      </div>${elevation}`;
 }
 
 function renderDescription(description) {
@@ -320,7 +332,7 @@ function renderRide(ride, index) {
           <span class="fact-value fact-location">${escapeHtml(ride.startLocation)}</span>
         </div>
       </div>
-      ${renderTrack(ride.track)}
+      ${renderTrack(ride.track, index)}
       <div class="route-notes">
         <h3>Route notes</h3>
         <div class="description">${renderDescription(ride.description)}</div>
@@ -549,6 +561,29 @@ export async function buildHtml() {
       text-transform: uppercase;
     }
     .map { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+    .map-frame { position: relative; }
+    .map-play {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      border: 1px solid var(--paper);
+      border-radius: 999px;
+      padding: 9px 15px;
+      background: var(--pine);
+      color: var(--paper);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .map-play:hover { background: var(--pine-light); }
+    .map-play:focus-visible, .map-controls input:focus-visible { outline: 3px solid #c4622d; outline-offset: 3px; }
+    .map-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; color: var(--pine); font-size: 13px; font-weight: 650; }
+    .map-controls[hidden] { display: none; }
+    .map-controls input { width: 150px; accent-color: var(--pine); }
+    .route-map.is-drawing .route-arrows { visibility: hidden; }
+    .route-position { visibility: hidden; }
+    .route-map.is-drawing .route-position { visibility: visible; }
     .elevation { display: block; width: 100%; height: auto; }
     .profile-stats { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 0 0 8px; padding: 0; color: var(--muted); font-size: 13px; list-style: none; }
     .profile-stats strong { color: var(--pine); }
@@ -642,6 +677,10 @@ export async function buildHtml() {
       .route-map, .profile { padding-top: 12px; }
       .route-map h3, .profile h3 { margin-bottom: 6px; }
       .map { height: 3in; }
+      .map-play, .map-controls { display: none; }
+      .route-line { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
+      .route-map.is-drawing .route-arrows { visibility: visible; }
+      .route-map.is-drawing .route-position { visibility: hidden; }
       .profile-stats { margin-bottom: 2px; }
       .route-notes { padding: 12px 0 0; }
       .description { max-width: none; }
@@ -670,6 +709,70 @@ export async function buildHtml() {
 
 
   </main>
+  <script>
+    document.querySelectorAll(".route-map").forEach((map) => {
+      const button = map.querySelector(".map-play");
+      const controls = map.querySelector(".map-controls");
+      const speed = controls.querySelector("input");
+      const output = controls.querySelector("output");
+      const lines = [...map.querySelectorAll(".route-line")];
+      const position = map.querySelector(".route-position");
+      const length = lines[0].getTotalLength();
+      if (!Number.isFinite(length) || length <= 0) return;
+
+      let progress = 0;
+      let frame = null;
+      let lastTime = null;
+      let started = false;
+
+      function draw() {
+        lines.forEach((line) => {
+          line.style.strokeDasharray = length + " " + length;
+          line.style.strokeDashoffset = length * (1 - progress);
+        });
+        const point = lines[0].getPointAtLength(length * progress);
+        position.setAttribute("cx", point.x);
+        position.setAttribute("cy", point.y);
+      }
+
+      function tick(time) {
+        if (lastTime !== null) {
+          progress = Math.min(1, progress + (time - lastTime) * Number(speed.value) / 12000);
+        }
+        lastTime = time;
+        draw();
+        if (progress < 1) {
+          frame = requestAnimationFrame(tick);
+        } else {
+          frame = null;
+          map.classList.remove("is-drawing");
+          button.textContent = "Replay route";
+        }
+      }
+
+      button.addEventListener("click", () => {
+        if (frame !== null) {
+          cancelAnimationFrame(frame);
+          frame = null;
+          button.textContent = "Resume route";
+          return;
+        }
+        if (!started || progress >= 1) progress = 0;
+        started = true;
+        lastTime = null;
+        map.classList.add("is-drawing");
+        draw();
+        button.textContent = "Pause route";
+        frame = requestAnimationFrame(tick);
+      });
+
+      speed.addEventListener("input", () => {
+        output.textContent = speed.value + "×";
+      });
+      button.hidden = false;
+      controls.hidden = false;
+    });
+  </script>
 </body>
 </html>
 `;

@@ -25,6 +25,8 @@ Run `npm start` and open <http://127.0.0.1:3000>. The guide is rebuilt on each p
 
 Add a `gpx_file` path (relative to this folder, e.g. `gpx/brownboldy.gpx`) to a ride. Export the GPX from Strava (route page > Export GPX) and save it there. The guide then shows a route map (OpenStreetMap tiles, so the map background needs an internet connection) and an elevation profile (metres, with elevation gain shown in each ride's facts alongside feet) with climbing, descending, high and low points. If the file is missing, the ride renders without them and a warning is logged.
 
+In the HTML guide, use **Play route** on a map to trace it with a moving marker, and adjust **Draw speed** while it plays. You can pause, resume, or replay each route independently. Printed maps always show the complete route.
+
 ## Ride data
 
 Each entry in the top-level `rides` list needs:
