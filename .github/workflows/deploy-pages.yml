@@ -30,6 +30,8 @@ jobs:
 
       - name: Generate the guide
         run: npm run build:html
+        env:
+          MAPBOX_PUBLIC_TOKEN: ${{ secrets.MAPBOX_PUBLIC_TOKEN }}
 
       - name: Prepare Pages artifact
         run: mkdir -p _site && cp index.html _site/index.html

@@ -27,6 +27,12 @@ Add a `gpx_file` path (relative to this folder, e.g. `gpx/brownboldy.gpx`) to a 
 
 In the HTML guide, use **Play route** on a map to trace it with a moving marker, and adjust **Draw speed** while it plays. You can pause, resume, or replay each route independently. Printed maps always show the complete route.
 
+### Optional perspective follow mode
+
+Set `MAPBOX_PUBLIC_TOKEN` to a Mapbox **public** token (`pk.`) when running `npm run build:html`, `npm run build`, or `npm start` to enable the **Perspective follow** option on each map. For GitHub Pages, add the token as a repository Actions secret named `MAPBOX_PUBLIC_TOKEN` and run the deployment workflow. The token is embedded in the published HTML and is visible to visitors; never use a secret token. Restrict the public token to your site's URLs in Mapbox, and check Mapbox's usage and pricing. Local files and local servers need a token that permits their origin.
+
+Follow mode loads Mapbox GL JS and Mapbox map and terrain data on demand, so it requires an internet connection and a WebGL-capable browser. Its 1× speed takes one minute for the full route, compared with 12 seconds in the overview. If Mapbox cannot load, the guide returns to the standard map. Without a token, the standard map and playback remain available.
+
 ## Ride data
 
 Each entry in the top-level `rides` list needs:

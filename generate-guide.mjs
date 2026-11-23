@@ -207,7 +207,7 @@ function renderMap(track) {
   const [sx, sy] = xy[0];
   const [ex, ey] = xy[xy.length - 1];
 
-  return `<svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Route map" preserveAspectRatio="xMidYMid slice">
+  return `<svg class="map" data-coordinates="${escapeHtml(JSON.stringify(pts.map((p) => [p.lon, p.lat])))}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Route map" preserveAspectRatio="xMidYMid slice">
           <rect width="${W}" height="${H}" fill="#e8ece6"/>
           ${tiles}
           <path class="route-line" d="${line}" fill="none" stroke="#fffefa" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -287,12 +287,15 @@ function renderTrack(track, index) {
         <h3>Route map</h3>
         <div class="map-frame">
           ${renderMap(track)}
+          <div class="follow-map" hidden aria-label="Perspective route map"></div>
           <button class="map-play" type="button" hidden>Play route</button>
         </div>
         <div class="map-controls" hidden>
           <label for="route-speed-${index}">Draw speed</label>
           <input id="route-speed-${index}" type="range" min="0.5" max="3" step="0.25" value="1">
           <output for="route-speed-${index}">1&times;</output>
+          <label class="follow-control" hidden><input type="checkbox"> Perspective follow</label>
+          <span class="follow-status" role="status"></span>
         </div>
       </div>${elevation}`;
 }
@@ -354,6 +357,10 @@ function renderIndex(ride, index) {
 }
 
 export async function buildHtml() {
+  const mapboxToken = process.env.MAPBOX_PUBLIC_TOKEN?.trim() ?? "";
+  if (mapboxToken && !mapboxToken.startsWith("pk.")) {
+    throw new Error("MAPBOX_PUBLIC_TOKEN must be a Mapbox public token starting with pk.");
+  }
   const yamlText = await readFile(sourcePath, "utf8");
   const data = parse(yamlText);
   if (data === null || typeof data !== "object" || Array.isArray(data) || !Array.isArray(data.rides)) {
@@ -374,7 +381,7 @@ export async function buildHtml() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light">${mapboxToken ? `\n  <meta name="mapbox-token" content="${escapeHtml(mapboxToken)}">` : ""}
   <title>Ride Guide</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -562,8 +569,12 @@ export async function buildHtml() {
     }
     .map { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
     .map-frame { position: relative; }
+    .map-frame .follow-map { position: absolute; inset: 0; overflow: hidden; border-radius: 10px; }
+    .follow-map[hidden] { display: none; }
+    .follow-position { width: 14px; height: 14px; border: 3px solid #fffefa; border-radius: 50%; background: #173c38; }
     .map-play {
       position: absolute;
+      z-index: 1;
       bottom: 14px;
       left: 14px;
       border: 1px solid var(--paper);
@@ -580,7 +591,11 @@ export async function buildHtml() {
     .map-play:focus-visible, .map-controls input:focus-visible { outline: 3px solid #c4622d; outline-offset: 3px; }
     .map-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; color: var(--pine); font-size: 13px; font-weight: 650; }
     .map-controls[hidden] { display: none; }
-    .map-controls input { width: 150px; accent-color: var(--pine); }
+    .map-controls input[type="range"] { width: 150px; accent-color: var(--pine); }
+    .follow-control { display: inline-flex; align-items: center; gap: 6px; }
+    .follow-control[hidden] { display: none; }
+    .follow-control input { accent-color: var(--pine); }
+    .follow-status { color: var(--muted); font-weight: 500; }
     .route-map.is-drawing .route-arrows { visibility: hidden; }
     .route-position { visibility: hidden; }
     .route-map.is-drawing .route-position { visibility: visible; }
@@ -678,6 +693,7 @@ export async function buildHtml() {
       .route-map h3, .profile h3 { margin-bottom: 6px; }
       .map { height: 3in; }
       .map-play, .map-controls { display: none; }
+      .follow-map { display: none !important; }
       .route-line { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
       .route-map.is-drawing .route-arrows { visibility: visible; }
       .route-map.is-drawing .route-position { visibility: hidden; }
@@ -710,13 +726,42 @@ export async function buildHtml() {
 
   </main>
   <script>
+    const mapboxToken = document.querySelector('meta[name="mapbox-token"]')?.content;
+    let mapboxLoading;
+    function loadMapbox() {
+      if (!mapboxLoading) {
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = "https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css";
+        const script = document.createElement("script");
+        script.src = "https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js";
+        const load = (element) => new Promise((resolve, reject) => {
+          element.onload = resolve;
+          element.onerror = () => reject(new Error("Could not load Mapbox GL JS."));
+          document.head.appendChild(element);
+        });
+        mapboxLoading = Promise.all([load(css), load(script)]).catch((error) => {
+          css.remove();
+          script.remove();
+          mapboxLoading = null;
+          throw error;
+        });
+      }
+      return mapboxLoading;
+    }
+
     document.querySelectorAll(".route-map").forEach((map) => {
       const button = map.querySelector(".map-play");
       const controls = map.querySelector(".map-controls");
-      const speed = controls.querySelector("input");
+      const speed = controls.querySelector('input[type="range"]');
       const output = controls.querySelector("output");
       const lines = [...map.querySelectorAll(".route-line")];
       const position = map.querySelector(".route-position");
+      const followControl = controls.querySelector(".follow-control");
+      const followToggle = followControl.querySelector("input");
+      const followStatus = controls.querySelector(".follow-status");
+      const followContainer = map.querySelector(".follow-map");
+      const svg = map.querySelector(".map");
       const length = lines[0].getTotalLength();
       if (!Number.isFinite(length) || length <= 0) return;
 
@@ -724,6 +769,109 @@ export async function buildHtml() {
       let frame = null;
       let lastTime = null;
       let started = false;
+      let followMap = null;
+      let followMarker = null;
+
+      const routePoints = lines[0].getAttribute("d").slice(1).split("L").map((pair) => {
+        const [x, y] = pair.split(" ").map(Number);
+        return { x, y };
+      });
+      const distances = [0];
+      for (let i = 1; i < routePoints.length; i++) {
+        distances.push(distances[i - 1] + Math.hypot(routePoints[i].x - routePoints[i - 1].x, routePoints[i].y - routePoints[i - 1].y));
+      }
+      const coordinates = JSON.parse(svg.dataset.coordinates);
+      const mercatorPoints = coordinates.map(([lon, lat]) => [
+        lon * Math.PI / 180,
+        Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)),
+      ]);
+      const mercatorDistances = [0];
+      for (let i = 1; i < mercatorPoints.length; i++) {
+        mercatorDistances.push(mercatorDistances[i - 1] + Math.hypot(
+          mercatorPoints[i][0] - mercatorPoints[i - 1][0],
+          mercatorPoints[i][1] - mercatorPoints[i - 1][1],
+        ));
+      }
+
+      function updateFollow() {
+        if (!followMap) return;
+        const distance = length * progress;
+        const ahead = lines[0].getPointAtLength(Math.min(length, distance + 10));
+        const behind = lines[0].getPointAtLength(Math.max(0, distance - 10));
+        const bearing = Math.atan2(ahead.x - behind.x, behind.y - ahead.y) * 180 / Math.PI;
+        let low = 0, high = distances.length;
+        while (low < high) {
+          const middle = Math.floor((low + high) / 2);
+          if (distances[middle] <= distance) low = middle + 1;
+          else high = middle;
+        }
+        const end = Math.min(low, coordinates.length - 1);
+        const start = Math.max(0, end - 1);
+        const span = distances[end] - distances[start];
+        const fraction = progress >= 1 ? 1 : span > 0 ? Math.max(0, Math.min(1, (distance - distances[start]) / span)) : 0;
+        const location = coordinates[start].map((value, i) => value + (coordinates[end][i] - value) * fraction);
+        const total = mercatorDistances[mercatorDistances.length - 1];
+        const drawn = !started || progress >= 1 ? 1 : (mercatorDistances[start] + (mercatorDistances[end] - mercatorDistances[start]) * fraction) / total;
+        followMap.setPaintProperty("route-outline", "line-trim-offset", [drawn, 1]);
+        followMap.setPaintProperty("route-line", "line-trim-offset", [drawn, 1]);
+        followMarker.setLngLat(location);
+        followMap.jumpTo({ center: location, bearing });
+      }
+
+      function stopFollow(message) {
+        if (followMap) followMap.remove();
+        followMap = null;
+        followMarker = null;
+        followContainer.hidden = true;
+        followToggle.checked = false;
+        followStatus.textContent = message;
+      }
+
+      async function startFollow() {
+        followToggle.disabled = true;
+        followStatus.textContent = "Loading perspective map...";
+        let instance;
+        try {
+          await loadMapbox();
+          followContainer.hidden = false;
+          instance = new mapboxgl.Map({
+            container: followContainer,
+            accessToken: mapboxToken,
+            style: "mapbox://styles/mapbox/outdoors-v12",
+            center: coordinates[0],
+            zoom: 14,
+            pitch: 60,
+            logoPosition: "top-left",
+            interactive: false,
+          });
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Mapbox map timed out.")), 20000);
+            instance.once("load", () => { clearTimeout(timeout); resolve(); });
+            instance.once("error", (event) => { clearTimeout(timeout); reject(event.error); });
+          });
+          instance.addSource("terrain", { type: "raster-dem", url: "mapbox://mapbox.mapbox-terrain-dem-v1", tileSize: 512, maxzoom: 14 });
+          instance.setTerrain({ source: "terrain" });
+          instance.addSource("route", { type: "geojson", lineMetrics: true, data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates } } });
+          instance.addLayer({ id: "route-outline", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#fffefa", "line-width": 7 } });
+          instance.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#c4622d", "line-width": 4 } });
+          const marker = document.createElement("div");
+          marker.className = "follow-position";
+          followMarker = new mapboxgl.Marker({ element: marker }).setLngLat(coordinates[0]).addTo(instance);
+          followMap = instance;
+          updateFollow();
+          followStatus.textContent = "";
+          instance.on("error", (event) => {
+            console.error("Perspective map error:", event.error);
+            stopFollow("Perspective map failed to load; showing the standard map.");
+          });
+        } catch (error) {
+          console.error("Perspective map error:", error);
+          if (instance) instance.remove();
+          stopFollow("Perspective map failed to load; showing the standard map.");
+        } finally {
+          followToggle.disabled = false;
+        }
+      }
 
       function draw() {
         lines.forEach((line) => {
@@ -733,11 +881,13 @@ export async function buildHtml() {
         const point = lines[0].getPointAtLength(length * progress);
         position.setAttribute("cx", point.x);
         position.setAttribute("cy", point.y);
+        updateFollow();
       }
 
       function tick(time) {
         if (lastTime !== null) {
-          progress = Math.min(1, progress + (time - lastTime) * Number(speed.value) / 12000);
+          const duration = followMap ? 60000 : 12000;
+          progress = Math.min(1, progress + (time - lastTime) * Number(speed.value) / duration);
         }
         lastTime = time;
         draw();
@@ -769,6 +919,11 @@ export async function buildHtml() {
       speed.addEventListener("input", () => {
         output.textContent = speed.value + "×";
       });
+      followToggle.addEventListener("change", () => {
+        if (followToggle.checked) startFollow();
+        else stopFollow("");
+      });
+      if (mapboxToken) followControl.hidden = false;
       button.hidden = false;
       controls.hidden = false;
     });
